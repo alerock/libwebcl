@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!-- Test -->
+<html>
+<head>
+    <title>WebCL (very) simple particles simulation</title>
+    <meta http-equiv="content-type" content="text/html; charset=us-ascii">
+    <link rel="stylesheet" media="all" type="text/css" href="css/style.css">
+    <script type="text/javascript" src="js/glMatrix.js"></script>
+    <script type="text/javascript" src="js/utils.js"></script>
+    <script type="text/javascript" src="js/dom_utils.js"></script>
+    <script type="text/javascript" src="js/sphere.js"></script>
+    <script type="text/javascript" src="js/particles.js"></script>
+    <script type="text/javascript" src="js/embed.js"></script>
+    <script type="text/javascript">
+        var ps;
+    
+        window.onload = function(){
+            var elem = document.getElementById("demo");
+            
+            var buttons = document.getElementsByClassName("toggleButton");
+            for (var i = 0; i < buttons.length; ++ i){
+                buttons[i].onclick = function(){toggleButton(this);};
+                buttons[i].originalClassName = buttons[i].className;
+            }
+            
+            var uniqueButtons = document.getElementsByClassName("unicity");
+            for (var i = 0; i < uniqueButtons.length; ++ i){
+                uniqueButtons[i].isUnique = true;
+                uniqueButtons[i].uniqueItems = uniqueButtons;
+                uniqueButtons[i].originalClassName = uniqueButtons[i].className;
+            }
+            
+            var uniqueButtons2 = document.getElementsByClassName("unicity2");
+            for (var i = 0; i < uniqueButtons2.length; ++ i){
+                uniqueButtons2[i].isUnique = true;
+                uniqueButtons2[i].uniqueItems = uniqueButtons2;
+                uniqueButtons2[i].originalClassName = uniqueButtons2[i].className;
+            }            
+            
+            document.getElementById("toggleFullscreen").onclick = function(){
+                toggleFullScreen(elem);
+            }
+            
+            function manageFullScreen(fs){
+                toggleButton(document.getElementById("toggleFullscreen"));
+                if (fs) {
+                    document.getElementById('cnv').width = window.screen.width;
+                    document.getElementById('cnv').height = window.screen.height - 35;
+                    ps.egl.glResize(window.screen.width, window.screen.height - 35);
+                } else {
+                    document.getElementById('cnv').width = 1000;
+                    document.getElementById('cnv').height = 400;
+                    ps.egl.glResize(1000, 400);
+                }    
+            };
+            
+            elem.addEventListener("fullscreenchange", function () {
+                manageFullScreen(document.fullscreen);
+            }, false);
+            
+            document.addEventListener("mozfullscreenchange", function () {
+                manageFullScreen(document.mozFullScreen);
+            }, false);
+            
+            elem.addEventListener("webkitfullscreenchange", function () {
+                manageFullScreen(document.webkitIsFullScreen);
+            }, false);
+            
+            ps = new ParticlesSystem("cnv", {
+                maxSpheres : 10,
+                backgroundColor: [0.0, 0.0, 0.0],
+                launcherPos : [0, 6],
+                launcherRadius : 10,
+                stopPlaneY : -5,
+                nbParticles : 64000,
+                startingEyePos : [0.0, 0.0, 20.0],
+                absorption :  60,
+                unitSphereWeight: 100,
+                particleWeight: 1,
+                lightPosition : [0.0, 0.0, 5.0],
+                particlesColor : [0.20, 0.40, 0.95],
+                infoPanel : {
+                    nbParticles : document.getElementById("nbParticles"),
+                    nbSpheres : document.getElementById("nbSpheres"),
+                    maxSpheres : document.getElementById("maxSphere")
+                },
+                getSphereType : function(){
+                    return Dom.id("sphereNormal").activated ? 0 :
+                           Dom.id("sphereAttractor").activated ? 1 : 
+                           Dom.id("sphereRepulsor").activated ? 2 : 
+                           -1;
+                }
+            });
+            
+            document.getElementById("noGravity").onclick = function(){
+                if (toggleButton(this)){
+                    ps.gravity = !this.activated;
+                }
+            };
+            
+            document.getElementById("pause").onclick = function(){
+                if (toggleButton(this)){
+                    ps.paused = true;
+                }
+            };
+            
+            document.getElementById("play").onclick = function(){
+                if (toggleButton(this)){
+                    ps.paused = false;
+                }
+            };
+
+            document.getElementById("save").onclick = function(){
+                var name = prompt("Save name", "My scene");
+                ps.saveCurrentState(name);
+            };
+            
+            document.getElementById("open").onclick = function(){
+                var name = prompt("Which scene to load ? ", "My scene");
+                ps.loadState(name);
+            };
+
+            document.getElementById("stop").onclick = function(){
+                ps.reset = true;
+                
+                toggleButton(document.getElementById("pause"));
+                ps.paused = true;
+            };
+            
+            toggleButton(Dom.id("sphereNormal"));            
+            toggleButton(Dom.id("pause"));
+            
+            ps.run();
+            
+        };
+    </script>
+</head>
+
+<body>
+    <div id="site">
+        <div id="content">
+            <h1>WebCL (very) simple particles simulation</h1>
+            <div id="demo">
+                <canvas id="cnv" style="border: none;" width="1000" height="400"></canvas>
+                <ul id="infos">
+                    <li class="text">Particles : <span id="nbParticles"></span></li>
+                    <li class="text">Spheres : <span id="nbSpheres"></span> / <span id="maxSphere"></span></li>
+                    
+                    <li class="buttonContainer "><input type="image" class="toggleButton unicity" src="img/sph.png" alt="Sphere" id="sphereNormal"/></li>
+                    <li class="buttonContainer "><input type="image" class="toggleButton unicity" src="img/att.png" alt="Attractor" id="sphereAttractor"/></li>
+                    <li class="buttonContainer "><input type="image" class="toggleButton unicity" src="img/rep.png" alt="Repulsor" id="sphereRepulsor"/></li>
+                    
+                    <li class="buttonContainer sep"><input type="image" class="unicity2" src="img/pla.png" alt="Play" id="play"/></li>
+                    <li class="buttonContainer "><input type="image" class="unicity2" src="img/pau.png" alt="Pause" id="pause"/></li>
+                    <li class="buttonContainer "><input type="image" class="unicity2" src="img/stop.png" alt="Stop" id="stop"/></li>
+                    
+                    <li class="buttonContainer sep"><input type="image" class="" src="img/nog.png" alt="No gravity" id="noGravity"/></li>
+                    
+                    <li class="buttonContainer right"><input type="image" class="" src="img/ful.png" alt="Full screen" id="toggleFullscreen"/></li>
+                    <li class="buttonContainer right"><input type="image" class="" src="img/ope.png" alt="Open" id="open"/></li>                    
+                    <li class="buttonContainer right"><input type="image" class="" src="img/sav.png" alt="Save" id="save"/></li>
+                </ul>
+            </div>
+            <ul id="manual">
+                <li> Click on an empty space to create a new sphere </li>
+                <li> Click on a sphere to select it </li>
+                <li> Once selected, you can move it or change its radius by pressing alt </li>
+                <li> To remove a sphere, press x</li>
+                <li> You can move the camera by pressing Ctrl while moving</li>
+            </ul>
+        </div>
+    </div>
+    <footer>
+        <div id="fcontent">
+            <a href="http://gfx.parapluie.org">Blog</a> | 
+            <a href="http://www.parapluie.org">Site</a> | 
+            <a href="https://bitbucket.org/fredericlb/webcl-simple-particles">Bitbucket repository</a>
+        </div>
+    </footer>
+</body>
+</html>

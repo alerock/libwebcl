@@ -1,0 +1,367 @@
+/*  VSPCL -- Very simple particles simulation using WebCL
+    Copyright (C) 2011  Frédéric Langlade-Bellone
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/> */
+    
+/**
+ * @class Main class for the particle system
+ * @constructor
+ * @param {String} canvas_id Id of the dom canvas
+ * @param {Hash} config Default configuration of this particles system
+ */
+var ParticlesSystem = function(canvas_id, config){
+    this.positionbufcl = undefined;
+    this.velocitybufcl = undefined;
+    this.spherebufcl = undefined;
+    this.cl = undefined;
+    this.queue = undefined;
+    this.spheres = [];
+    this.selected = undefined;
+    this.nbParticles = Math.pow(2, config.particlesPow);
+    this.gravity = true;
+    this.paused = false;
+    this.reset = true;
+    this.pods = [];
+    var self = this;
+    this.config = config;
+    this.egl = new EmbedGL(canvas_id, {
+        vertShader : "programs/shader.vert",
+        fragShader : "programs/shader.frag",
+        attributes : {
+            "aVertPosition" : "vec4",
+            "aVertNormal" : "vec3",
+            "aVelocity" : "vec4"
+        },
+        uniforms : {
+            "uPMatrix" : "projection",
+            "uMvMatrix" : "modelview",
+            "uNMatrix" : "normal",
+            "uIsPoint" : "bool",
+            "uSphPos" : "vec3",
+            "uSphColor" : "vec3",
+            "uIsSelected" : "bool"
+        },
+        clickEvt : function(e, pos){    
+            var s = self.sphereAt(pos);
+            if (s === undefined && self.spheres.length < self.config.maxSpheres){
+                self.buildNewPod(pos);
+                //self.addSphere(pos[0], pos[1], 0, 1, self.config.getSphereType());
+                //self.selected = s;
+            } else {
+                self.selected = s;
+            }
+        },
+        moveEvt : function(e, clicked, move){
+            move[1] *= -1;
+            if (clicked && self.selected !== undefined){
+                self.selected.move(move);
+                self.updateSpheresPos();
+            }
+        },
+        pressedK88 : function(){
+            if (self.selected !== undefined){
+                self.removeSphere(self.selected);
+            }
+        },
+        altMoveEvt: function(e, move){
+            if (self.selected !== undefined){
+                self.selected.growRadius(self.egl, move);
+                self.updateSpheresPos();
+            }
+        },
+        bgColor : this.config.backgroundColor,
+        eyePos : this.config.startingEyePos,
+        fps : this.config.fps,
+        enableRotations : false,
+        enableMoves : true,
+        fovWidth : 6,
+        near : 0.1,
+        far: 100,
+        zoomReduction : 0.25
+    });
+    this._initBuffers();
+    this._initCL();
+};
+
+/**
+ * @brief Init the CL part of the demo, by getting context, compiling the program and creating buffers
+ */
+ParticlesSystem.prototype._initCL = function() {
+    this.cl = window.webCL;
+    if (this.cl === undefined){
+        alert("You need WebCL to run this demo. Please download the corresponding Firefox binaries at gfx.parapluie.org");
+    }
+    var platforms = this.cl.getPlatforms();
+    var devices = platforms[0].getDevices(this.cl.CL_DEVICE_TYPE_ALL);
+    var context = this.cl.createContext(devices, platforms[0], this.egl.gl);
+    var prog_src = Dom.ajax("programs/particles.cl");
+    var program = context.createProgramWithSource(prog_src);
+    try{
+        program.buildProgram(devices[0], "");
+    }
+    catch(buildError){
+        alert(program.getProgramBuildInfo(devices[0], this.cl.CL_PROGRAM_BUILD_LOG));
+    }
+    this.kernel = program.createKernel("particles");
+    try {
+        this.localMax = devices[0].getDeviceInfo(this.cl.CL_DEVICE_MAX_WORK_ITEM_SIZES)[0];
+        if (this.nbParticles < this.localMax){
+            this.localMax = this.nbParticles;
+        }
+    }
+    catch(workgroupError) {
+        alert("Could not determine workgroup size");
+    }
+    this.positionbufcl = context.createBufferFromGL(this.cl.MEM_READ_WRITE, this.egl.getBuffer("aVertPosition"));
+    this.velocitybufcl = context.createBufferFromGL(this.cl.MEM_READ_WRITE, this.egl.getBuffer("aVelocity"));
+    this.spherebufcl = context.createBuffer(this.cl.MEM_READ_ONLY, 32 * this.config.maxSpheres);
+    this.kernel.setMemArg(0, this.positionbufcl);
+    this.kernel.setMemArg(1, this.velocitybufcl);
+    this.kernel.setMemArg(2, this.spherebufcl);
+    this.queue = context.createCommandQueue(devices[0], 0);
+    this.queue.enqueueWriteBuffer(this.spherebufcl, false, 0, 0, new Float32Array([]), null);
+};
+
+/**
+ * @brief Starts the execution of the particles system
+ */
+ParticlesSystem.prototype.run = function(){
+    var buf = new Float32Array(this.nbParticles);
+    var self = this;
+    var seed = Math.random();
+    var loop = function(){
+        
+        if (!self.paused || self.reset){
+            self.kernel.setScalarArg(3, self.spheres.length, 8);
+            self.kernel.setScalarArg(4, seed, 8);
+            self.kernel.setScalarArg(5, self.config.launcherPos[0], 8);
+            self.kernel.setScalarArg(6, self.config.launcherPos[1], 8);
+            self.kernel.setScalarArg(7, self.config.launcherRadius, 8);
+            self.kernel.setScalarArg(8, self.config.stopPlaneY, 8);
+            self.kernel.setScalarArg(9, self.config.fps, 8);
+            self.kernel.setScalarArg(10, self.config.absorption, 8);
+            self.kernel.setScalarArg(11, self.config.unitSphereWeight, 8);
+            self.kernel.setScalarArg(12, self.config.particleWeight, 8);
+            self.kernel.setScalarArg(13, self.gravity, 8);
+            self.kernel.setScalarArg(14, self.reset, 8);
+            self.reset = false;
+            self.queue.enqueueAcquireGLObjects(self.positionbufcl, null, false);
+            self.queue.enqueueAcquireGLObjects(self.velocitybufcl, null, false);
+            self.queue.enqueueNDRangeKernel(self.kernel, 1, 0, self.nbParticles, null);
+            self.queue.enqueueReleaseGLObjects(self.positionbufcl, null, false);
+            self.queue.enqueueReleaseGLObjects(self.velocitybufcl, null, false);
+            self.queue.finish(); 
+            
+            
+        }
+    
+        self._drawScene();
+
+        seed += 1;
+        setTimeout(loop, 1000/self.config.fps);
+    };
+    loop();
+};
+
+/**
+ * @brief Add a new sphere to the system
+ * @param {float} x X coord of the sphere
+ * @param {float} y Y coord of the sphere
+ * @param {float} z Z coord of the sphere
+ * @param {float} r Radius of the sphere
+ * @return The corresponding object
+ */
+ParticlesSystem.prototype.addSphere = function(x, y, z, r, type) {
+    var s = new Sphere(r, type, this.egl, vec3.create([x, y, 0]));
+    this.spheres.push(s);
+    var arr = s.getTypedArray();
+    this.queue.enqueueWriteBuffer(this.spherebufcl, false, (this.spheres.length - 1) * 4 * 4, arr.byteLength, arr, null);
+    return s;
+};
+
+ParticlesSystem.prototype.addSphereWithVec = function(vec,  r, type) {
+    var s = new Sphere(r, type, this.egl, vec);
+    this.spheres.push(s);
+    var arr = s.getTypedArray();
+    this.queue.enqueueWriteBuffer(this.spherebufcl, false, (this.spheres.length - 1) * 4 * 4, arr.byteLength, arr, null);
+    return s;
+};
+
+/**
+ * @brief Remove a sphere from the system
+ */
+ParticlesSystem.prototype.removeSphere = function(s) {
+    var self = this;
+    for (var i = 0; i < this.spheres.length; i ++){
+        if (this.spheres[i] == s){
+            this.spheres.splice(i, 1);
+            this.updateSpheresPos();
+            return;
+        }
+    }
+
+};
+
+
+/**
+ * @brief Rewrites the CL buffer containing the spheres positions
+ */
+ParticlesSystem.prototype.updateSpheresPos = function(){
+    for (i = 0; i < this.spheres.length; i ++){
+        var tarr = this.spheres[i].getTypedArray();
+        this.queue.enqueueWriteBuffer(this.spherebufcl, false, i * 4 * 4, tarr.byteLength, tarr, null);
+    }  
+};
+
+/**
+ * @brief Initializes the GL buffers
+ */
+ParticlesSystem.prototype._initBuffers = function() {
+    var l1 = [];
+    var ln = [];
+    
+    for (var i = 0; i < this.nbParticles; i++) {
+        l1.push(0, 0, 0, 1);
+        ln.push(0, 0, 0);
+    }
+    this.egl.setAttribute("aVertPosition", new Float32Array(l1));
+    this.egl.setAttribute("aVertNormal", new Float32Array(ln));
+    this.egl.setAttribute("aVelocity", new Float32Array(l1));
+};
+
+/**
+ * @brief Draws the current state of the system
+ */
+ParticlesSystem.prototype._drawScene = function(){
+    this.egl.setScene();
+    this.egl.attach("aVertPosition");
+    this.egl.attach("aVertNormal");
+    this.egl.attach("aVelocity");
+    this.egl.setUniform("uIsPoint", 1);
+    this.egl.setUniform("uSphPos", [0, 0, 0]);
+    this.egl.setUniform("uIsSelected", 0);
+    this.egl.draw(this.egl.gl.POINTS, this.nbParticles);
+
+    for (var i = 0; i < this.spheres.length; i ++){
+        this.egl.setUniform("uIsPoint", 0);
+        this.egl.setUniform("uSphColor", this.spheres[i].getColor());
+        this.egl.setUniform("uSphPos", this.spheres[i].center);
+        this.egl.setUniform("uIsSelected", (this.selected == this.spheres[i]) ? 1 : 0);
+        this.egl.attach("aVertPosition", this.spheres[i].posbuf);
+        this.egl.attach("aVertNormal", this.spheres[i].normbuf);
+        this.egl.draw(this.egl.gl.TRIANGLES, this.spheres[i].len, this.spheres[i].idxbuf);
+    }
+    
+    for (var i = 0; i < this.pods.length; ++ i){
+        this.egl.setUniform("uIsPoint", 0);
+        
+        var start = this.pods[i].start;
+        var end;
+        
+        if (this.pods[i].end === undefined){
+            end = this.egl.getMouseLastPos();
+        }
+        
+        console.log(start, end);
+        
+        var pts = [
+            start[0] - 1, start[1] - 1, 0, 1,
+            end[0] + 1, end[1] + 1, 0, 1,    
+            end[0] + 1, end[1] - 1, 0, 1,            
+            start[0] - 1, start[1] + 1, 0, 1
+            //end[0] + 0.01, end[1] - 0.01, 0, 1,
+            //end[0] + 0.01, end[1] + 0.01, 0, 1
+        ];
+        
+        //var idxs = [0, 1, 2, 3, 4, 5];
+        
+        var fake_normals = [];
+        
+        for (var j = 0; j < 4 * 3; ++ j){
+            fake_normals.push(0);
+        }
+        
+        this.egl.gl.bindBuffer(this.egl.gl.ARRAY_BUFFER, this.pods[i].posBuffer);
+        this.egl.gl.bufferData(this.egl.gl.ARRAY_BUFFER, new Float32Array(pts), this.egl.gl.STREAM_DRAW);
+        this.egl.gl.bindBuffer(this.egl.gl.ARRAY_BUFFER, this.pods[i].normBuffer);
+        this.egl.gl.bufferData(this.egl.gl.ARRAY_BUFFER, new Float32Array(fake_normals), this.egl.gl.STREAM_DRAW);        
+        //this.egl.gl.bindBuffer(this.egl.gl.ELEMENT_ARRAY_BUFFER, this.pods[i].idxBuffer);
+        //this.egl.gl.bufferData(this.egl.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(idxs), this.egl.gl.STATIC_DRAW);
+        this.egl.attach("aVertPosition", this.pods[i].posBuffer);
+        this.egl.attach("aVertNormal", this.pods[i].normBuffer);
+        this.egl.draw(this.egl.gl.QUADS, 4);
+    }
+    
+    this.config.infoPanel.nbParticles.innerHTML = this.nbParticles;
+    this.config.infoPanel.nbSpheres.innerHTML = this.spheres.length;
+    this.config.infoPanel.maxSpheres.innerHTML = this.config.maxSpheres;
+};
+
+/**
+ * @brief Returns the sphere that can be found at a certain position
+ * @param {float, float} pos The position
+ * @return The corresponding object or undefined if nothing was found
+ */
+ParticlesSystem.prototype.sphereAt = function(pos){
+    for (var i = 0; i < this.spheres.length; i ++){
+        if (dist2(pos, this.spheres[i].center) <= this.spheres[i].radius){
+            return this.spheres[i];
+        }
+    }
+    return undefined;
+};
+
+
+ParticlesSystem.prototype.saveCurrentState = function(){
+    var name = prompt("Save name", "My scene");
+    if (name != "" && (localStorage[name] === null || confirm(name + " already exists. Overwrite ?"))){
+        var saveObj = {spheres : []};
+        
+        for (var i = 0; i < this.spheres.length; ++ i){
+            saveObj.spheres.push({
+                centerX : this.spheres[i].center[0],
+                centerY : this.spheres[i].center[1],
+                radius : this.spheres[i].radius,
+                type   : this.spheres[i].type
+            });
+        }
+
+        localStorage[name] = JSON.stringify(saveObj);
+    }
+};
+
+ParticlesSystem.prototype.loadState = function(){
+    var name = prompt("Which scene to load ? ", "My scene");
+    if (name !== null){
+        if (localStorage[name] !== null){
+            var saveObj = JSON.parse(localStorage[name]);
+            this.spheres = [];
+            this.updateSpheresPos();
+            for (var i = 0; i < saveObj.spheres.length; ++ i){
+                this.addSphere(saveObj.spheres[i].centerX, saveObj.spheres[i].centerY, 0, saveObj.spheres[i].radius, saveObj.spheres[i].type);
+            }      
+        } else {
+            alert("Unknown scene");
+        }
+    }
+};
+
+ParticlesSystem.prototype.buildNewPod = function(pos){
+    this.pods.push({
+        start: pos,
+        posBuffer: this.egl.gl.createBuffer(),
+        idxBuffer: this.egl.gl.createBuffer(),
+        normBuffer: this.egl.gl.createBuffer()
+    });
+};

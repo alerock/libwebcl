@@ -1,0 +1,224 @@
+/* VSPCL -- Very simple particles simulation using WebCL
+    Copyright (C) 2011  Frédéric Langlade-Bellone
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/> */
+
+/**
+ * From http://prideout.net/blog/?p=67
+ * @brief Returns a pseudo random value
+ * @param seed Seed for the pseudo random value
+ * @param b Max value
+ * @return A random value
+ */
+float randhashf(uint seed, float b)
+{
+    uint i=(seed^12345391)*2654435769;
+    i^=(i<<6)^(i>>26);
+    i*=2654435769;
+    i+=(i<<5)^(i>>12);
+    return (b * i)*(1.0/4294967295.0);
+}
+
+/*
+float distance(float4 p1, float4 p2)
+{
+    return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
+}
+*/
+/*
+bool isColliding(float2 p, float2 s, float srad) {
+    return distance(p, s) <= srad;
+}
+
+float myabs(float mf){
+    if (mf < 0){
+        return -mf;
+    } else {
+        return  mf;
+    }
+}
+
+float2 getBouncingVelocity(float2 s, float srad, float2 p, float2 v, float unitSphereWeight, float particleWeight){
+    float2 c = s - p;
+    float d = dot(normalize(v), c);
+    float2 n = normalize(p - s);
+    float2 vec = v + normalize(v) * (d - sqrt(pow(srad, 2) - pow(length(c), 2) + pow(d, 2)));
+    
+    return vec - 2.0 * dot(vec, n) / (unitSphereWeight * srad + particleWeight) * unitSphereWeight * srad * n;
+}
+*/
+
+void integrate(float t, float4 * pos, float4 * pos2, float4 * pos3, float4 forces)
+{
+    *pos3 = *pos2;
+    *pos2 = *pos;
+    
+    *pos = pow(t, 2) * forces + 2 * (*pos2) - *pos3;
+}
+
+int crossingSpherePoint(float4 src, float4 dst, float4 sph, float4 * out, float4 *onSphere)
+{
+    
+    float a = pow(dst.x - src.x, 2) + pow(dst.y - src.y, 2);
+    float b = 2 * ( (dst.x - src.x) * (src.x - sph.x) + (dst.y - src.y) * (src.y - sph.y) );
+    float c = pow(sph.x, 2) + pow(sph.y, 2) + pow(src.x, 2) + pow(src.y, 2) - 2 * (sph.x * src.x + sph.y * src.y) - pow(sph.w, 2);
+
+    float coef = b * b - 4 * a * c;
+    float k1 = 0;
+    float k2 = 0;
+    
+    if (coef == 0){
+        k1 = -b / (2 * a);
+    } else if (coef > 0){
+        k1 = (-b - sqrt(coef)) / (2 * a);
+        k2 = (-b + sqrt(coef)) / (2 * a);
+    } else {
+        return 0;
+    }
+
+    if (k1 >= 0 && k1 <= 1){
+        float4 ptA = src + k1 * (dst - src);
+        float distA = sqrt(pow(src.x - ptA.x, 2) + pow(src.y - ptA.y, 2));
+
+        if (k2 >= 0 && k2 <= 1){
+            float4 ptB = src + k2 * (dst - src);
+            float distB = sqrt(pow(src.x - ptB.x, 2) + pow(src.y - ptB.y, 2));
+
+            if (distA < distB) *out = ptA;
+            else               *out = ptB;
+            *onSphere = *out;
+            //(*out).y += (src.y - (*out).y);
+            return 2;
+        } else {
+            *out = ptA;
+            *onSphere = *out;
+            //(*out).y += (src.y - (*out).y);
+            return 1;
+        }
+    } else {
+        return 0;
+    } 
+}
+/*
+p'x = cos(theta) * (px-ox) - sin(theta) * (py-oy) + ox
+p'y = sin(theta) * (px-ox) + cos(theta) * (py-oy) + oy
+*/
+float4 rotateAngle(float4 * p2, float4 * p, float4 ptOnSphere, float4 sph, float * debug){
+    float4 orig = *p2;
+    float4 out;
+    float angle = -atan2(ptOnSphere.y - (sph.y + sph.w), ptOnSphere.x - sph.x);
+    out.x = cos(angle) * (orig.x - ptOnSphere.x) - sin(angle) * (orig.y - ptOnSphere.y) + ptOnSphere.x;    
+    out.y = sin(angle) * (orig.x - ptOnSphere.x) + cos(angle) * (orig.y - ptOnSphere.y) + ptOnSphere.y;
+    
+    *debug = angle * 180 / 3.14;
+    //(*p).y += val / 2.0;
+    return out;
+}
+
+float2 getBouncingVelocity(float2 s, float srad, float2 p, float2 v, float unitSphereWeight, float particleWeight){
+    float2 c = s - p;
+    float d = dot(normalize(v), c);
+    float2 n = normalize(p - s);
+    float2 vec = v + normalize(v) * (d - sqrt(pow(srad, 2) - pow(length(c), 2) + pow(d, 2)));
+    
+    return vec - 2.0 * dot(vec, n) / (unitSphereWeight * srad + particleWeight) * unitSphereWeight * srad * n;
+}
+
+/**
+ * @brief Kernel which modifies the movements of particles based on physic
+ * @param pos Positions of the particles
+ * @param vel Velocity vectors of the particles
+ * @param sph Center (x,y,z) and radius of each sphere in the scene
+ * @param sphSize Number of spheres in the scene
+ * @param rndSeed A random value, to be used as a random generator seed
+ * @param launcherPosX X coord of the disc center from where particles are launched
+ * @param launcherPosY Y coord of the disc center from where particles are launched
+ * @param launcherRadius Radius of the disc from where points are launched
+ * @param stopLinePosY Y coord of the plane under which particles are considered as lost
+ * @param fps Number of frames per second
+ * @param absorption Velocity reduction on bounce (in percent)
+ * @param unitSphereWeight Weight of a unit sphere
+ * @param particleWeight Weight of a particle
+ * @param debug A buffer which outputs its results in the JS console
+ */
+__kernel void particles(__global float4* pos,
+                        __global float4* pos2,
+                        __global float4* pos3,
+                        __global float4* sph,
+                        float sphSize,
+                        float rndSeed,
+                        float launcherPosX,
+                        float launcherPosY,
+                        float launcherRadius,
+                        float stopPlanePosY,
+                        float fps,
+                        float absorption,
+                        float unitSphereWeight,
+                        float particleWeight,
+                        __global float* debug)
+{
+    unsigned int i = get_global_id(0);
+    uint seed = rndSeed * 1000 + i;
+    
+    float4 p = pos[i];
+    float4 p2 = pos2[i];
+    float4 p3 = pos3[i];
+    debug[i] = - 1000;
+    if((pos[i].x==0 && pos[i].y==0 ) || pos[i].y < stopPlanePosY )
+    {               
+        float theta = randhashf(seed++, 6.28318530718);
+        float r = randhashf(seed++, launcherRadius);
+        float y = randhashf(seed++, 0.1);
+        p = (float4)(launcherPosX + r * cos(theta), launcherPosY - y, 0, 1);
+        p2 = p;
+        p3 = p;
+    } else {
+        float4 vel = (float4)(0, 0, 0, 0);
+        vel.y -= 9.81 / (fps * 100.0);
+
+        integrate(1, &p, &p2, &p3, vel);
+
+        //float4 nextPos = pow(1., 2) * vel + 2 * p - p2;
+
+        float4 outputPoint, ptOnSphere;
+        int nextIsCrossing = 0;
+        for (int j = 0; j < sphSize; ++ j){
+            if (crossingSpherePoint(p2, p, sph[j], &outputPoint, &ptOnSphere)){
+                nextIsCrossing = 1;
+            }
+        }
+
+        if (distance(p, p2) <= 0.01 && nextIsCrossing){
+            p = p2;
+        } else {
+            for (int j = 0; j < sphSize; ++ j){
+                if (crossingSpherePoint(p2, p, sph[j], &outputPoint, &ptOnSphere)){
+                    vel.xy = getBouncingVelocity(sph[j].xy, sph[j].w, p2.xy, (float2)(0,0), unitSphereWeight, particleWeight);
+                    integrate(1, &p, &p2, &p3, vel);
+                    /*float d;
+                    rotateAngle(&p, &outputPoint, ptOnSphere, sph[j], &d);
+                    integrate(1, &p, &p2, &p3, vel);
+                    debug[i]=d;
+                    break;*/
+                }
+            }
+        }
+        
+        
+
+    }
+        pos[i] = p;
+        pos2[i] = p2;
+        pos3[i] = p3;
+}

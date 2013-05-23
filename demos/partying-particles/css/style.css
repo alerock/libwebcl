@@ -1,0 +1,145 @@
+html {
+    height: 100%;
+    background-image: url(../img/bg.png);
+    font-family: Arial;
+    font-size: 9pt;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+#site {
+    width: 100%;
+    height: 95%;
+    position: relative;
+    top: 2%;
+}
+
+#content {
+    width: 1020px;
+    background: white;
+    margin: 0 auto 0px auto; 
+    border-width: 0 1px 0 1px;
+    border-style: solid;
+    border-color: black;
+
+    border-radius: 5px;
+}
+
+footer {
+    height: 5%;
+    background: white;
+    margin: 0;
+    padding: 0;
+}
+
+#fcontent {
+    z-index: 1;
+    width: 100%;
+    padding: 5px 0px 5px 0px;
+    color: black;
+    background: white;
+    text-align: center;
+}
+
+#fcontent a, #fcontent a:visited {
+    color: #ff7500;
+}
+
+h1 {
+    border-bottom: 2px solid black;
+    color: black;
+    text-align:center;
+    background-color: #ff7500;
+    border-radius: 2px 2px 0 0;
+    margin: 0px;
+    padding: 0px;
+}
+
+#demo {
+    width: 1000px;
+    margin:10px;
+}
+
+#demo:-moz-full-screen{
+    width: 100%;
+    height: -moz-calc(100% - 50px);
+    margin: 0;
+    padding:0 ;
+}
+
+#demo:-webkit-full-screen{
+    width: 100%;
+}
+
+#infos {
+    background: #cdcdcd;
+    height: 32px;
+    list-style-type: none;
+    margin:0;
+    padding:0;
+    
+}
+
+#infos li.text {
+    float: left;
+    width:12%;
+    margin:4px 5px 0 10px;
+    height: 24px;
+    line-height: 24px;
+    background:white;
+    border-radius:5px;
+    padding: 0 5px 0 5px;
+    font-family: arial;
+}
+
+#infos li.buttonContainer {
+    float: left;
+    margin:3px 10px 0 10px;
+    height: 24px;
+    font-family: arial;
+}
+
+#infos li.buttonContainer input{
+background: #ffb76b; /* Old browsers */
+background: -moz-linear-gradient(top, #ffb76b 0%, #ffa73d 50%, #ff7c00 100%, #ff7f04 100%); /* FF3.6+ */
+background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#ffb76b), color-stop(50%,#ffa73d), color-stop(100%,#ff7c00), color-stop(100%,#ff7f04)); /* Chrome,Safari4+ */
+background: -webkit-linear-gradient(top, #ffb76b 0%,#ffa73d 50%,#ff7c00 100%,#ff7f04 100%); /* Chrome10+,Safari5.1+ */
+background: -o-linear-gradient(top, #ffb76b 0%,#ffa73d 50%,#ff7c00 100%,#ff7f04 100%); /* Opera 11.10+ */
+background: -ms-linear-gradient(top, #ffb76b 0%,#ffa73d 50%,#ff7c00 100%,#ff7f04 100%); /* IE10+ */
+background: linear-gradient(top, #ffb76b 0%,#ffa73d 50%,#ff7c00 100%,#ff7f04 100%); /* W3C */
+    width: 24px;
+    border-radius: 5px;
+    color: white;
+    height: 24px;
+    border-style: solid;
+    border-width: 2px;
+    border-color: #ffaa00;
+}
+
+#infos li.buttonContainer input.clicked{
+    border-style: inset;
+    border-color: #ffaa00;
+}
+
+#infos li.buttonContainer input.clicked {
+}
+
+#infos li.right {
+    float: right;
+}
+
+#infos li.sep {
+    margin-left: 30px;
+}
+
+#manual {
+    
+}
+
+
+
+

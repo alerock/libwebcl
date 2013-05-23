@@ -33,7 +33,7 @@
         script.onload = function() { console.log(srcUrl, "loaded"); };
         script.src = srcUrl;
         head.appendChild(script);
-      })("/webcl.js");
+      })("webcl.js");
     }
   })();
 

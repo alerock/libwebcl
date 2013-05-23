@@ -5,28 +5,10 @@
   <meta name="keywords" content="webcl, gpu, gpgpu, opencl, rng, prng" />
   <meta name="description" content="WebCL based Random Number Generator"/>
   <link href="/default.css" rel="stylesheet" type="text/css" />
-  <img src="/images/img01.jpg" style="display:none"/>
-  <img src="/images/img02.jpg" style="display:none"/>
-  <img src="/images/img03.jpg" style="display:none"/>
   <script type="text/javascript" src="rng.js"></script>
 </head>
 
 <body id="rng" onload="rng.setup()">
-
-<div id="header">
-  <div id="logo">
-    <h1><a href="/index.html">WebCL</a></h1>
-  </div>  <!-- end div#logo -->
-  <div id="menu">
-    <ul>
-      <li><a href="/index.html" id="nav-home">Home</a></li>
-      <li><a href="/demos.html" id="nav-demos">Demos</a></li>
-      <li><a href="/tutorials/tutorials.html" id="nav-tutorial">Tutorial</a></li>
-      <li><a href="/docs/" target="_blank">Docs</a></li>
-      <li><a href="http://github.com/toaarnio/webcl-firefox" target="_blank">Code</a></li>
-    </ul>
-  </div> <!-- end div#menu -->
-</div> <!-- end div#header -->
 
 <table style="margin: 0 0;">
   <thead>
@@ -158,37 +140,5 @@ kernel void clRandom1D(__global uchar4* dst,
 
   </tbody>
 </table>
-
-<div id="disqus_thread"></div>
-<script type="text/javascript">
-  var disqus_shortname = 'webcl';
-  var disqus_url = 'http://webcl.nokiaresearch.com/rng/';
-  var disqus_developer = 0;
-  (function() {
-    var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-    dsq.src = 'http://' + disqus_shortname + '.disqus.com/embed.js';
-    (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-  })();
-</script>
-
-<div id="footer-wrapper">
-  <div id="footer">
-    <p id="legal">Copyright &copy; 2011 NRC Tampere. All Rights Reserved. Web design based
-    on <a href="http://www.freecsstemplates.org/">Free CSS Templates</a>.</p>
-  </div>
-</div> <!-- end div#footer-wrapper -->
-
-
-
-<script type="text/javascript">
-  var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-22607782-1']);
-  _gaq.push(['_trackPageview']);
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();
-</script>
 </body>
 </html>

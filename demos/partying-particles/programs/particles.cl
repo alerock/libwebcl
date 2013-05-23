@@ -14,6 +14,9 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/> */
 
+float randhashf(uint seed, float b);
+bool isColliding(float2 p, float2 s, float srad);
+float2 getBouncingVelocity(float2 s, float srad, float2 p, float2 v, float unitSphereWeight, float particleWeight);
 
 // --------------------------------------------------
 /**
@@ -133,14 +136,15 @@ __kernel void particles(__global float4* pos,
 
         for (int j = 0; j < sphSize; j ++){
             float currSphereWeight = unitSphereWeight * sph[j].w;
+            float dist = distance(sph[j].xy, pt);
             if (sph[j].z == 1.0){
                 float2 vec = normalize(sph[j].xy - pt);
-                float  n   = 9.81 / 3 * elapsedTime * (currSphereWeight * particleWeight / pow(distance(sph[j].xy, pt), 2.0));
+                float  n   = 9.81 / 3 * elapsedTime * (currSphereWeight * particleWeight / pow( dist, 2));
                 vel[i] += vec * n;
             }
             else if (sph[j].z == 2.0){
                 float2 vec = normalize(sph[j].xy - pt);
-                float  n   = 9.81 / 3 * elapsedTime * (currSphereWeight * particleWeight / pow(distance(sph[j].xy, pt), 2.0));
+                float  n   = 9.81 / 3 * elapsedTime * (currSphereWeight * particleWeight / pow(dist, 2));
                 vel[i] -= vec * n;
             }
         }

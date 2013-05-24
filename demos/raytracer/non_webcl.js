@@ -49,8 +49,8 @@ var X_SQ_RADIUS = 22;
 var X_R_RADIUS = 23;	
 var ROW_W = 24;	
 
-var prim_list = prim_list_float32View;
-var prim_cnt = n_primitives;
+var prim_list = [];// prim_list_float32View;
+var prim_cnt = 0; //n_primitives;
 
 function soft_normalize(vec){ //float4 arg, float4 return
 	var ret = new Array(vec[0], vec[1], vec[2], 0);

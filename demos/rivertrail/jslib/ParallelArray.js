@@ -129,8 +129,10 @@ var ParallelArray = function () {
     if (useWebCL) {
         try {
             var platforms = WebCL.getPlatformIDs();
-            var extensions = platforms[0].getPlatformInfo(WebCL.CL_PLATFORM_EXTENSIONS);
-            enable64BitFloatingPoint = (extensions.indexOf("cl_khr_fp64") !== -1);
+            var extension = platforms[0].getExtension("KHR_FP64");
+            // var extensions = platforms[0].getPlatformInfo(WebCL.CL_PLATFORM_EXTENSIONS);
+            enable64BitFloatingPoint = true; //(extensions.indexOf("cl_khr_fp64") !== -1);
+            console.log("extension", extension);
         } catch (e) {
             console.log("Unable to find OpenCL platform: "+e);
             console.log("enable64BitFloatingPoint has been disabled");

@@ -59,8 +59,7 @@ rng = (function() {
       switch (deviceTypeName) {
 
       case 'JS':
-        rng.runJavaScript();
-        this.animFunc = undefined;
+        this.animFunc = function () { rng.runJavaScript(); }
         break;
 
       case 'CPU': 

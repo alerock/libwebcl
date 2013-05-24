@@ -634,7 +634,6 @@ function WebCLStepper(){
   this.cmdQueue = this.ctx.createCommandQueue(devices[0], 0);
 
   this.sizeOfFloat = 4;
-  this.utils = WebCL.getUtils();
 }
 
 WebCLStepper.prototype.step = function(inn,out){
@@ -686,46 +685,26 @@ WebCLStepper.prototype.step = function(inn,out){
     this.kernel.setKernelArg(i++, inn.YMIN, WebCL.types.FLOAT);
     this.kernel.setKernelArg(i++, inn.YMAX, WebCL.types.FLOAT);
     this.kernel.setKernelArg(i++, inn.G, WebCL.types.FLOAT);
-
-    function createAllocatedDataObject(size,data){
-      var o = WebCL.createDataObject();
-      o.allocate(size);
-      o.set(data);
-      return o;
-    }
-
-    // Write the buffer to OpenCL device memory
-    this.dataObjectX = createAllocatedDataObject(this.bufSize,inn.x);
-    this.dataObjectY = createAllocatedDataObject(this.bufSize,inn.y);
-
-    this.dataObjectVx = createAllocatedDataObject(this.bufSize,inn.vx);
-    this.dataObjectVy = createAllocatedDataObject(this.bufSize,inn.vy);
-
-    this.dataObjectInvMass = createAllocatedDataObject(this.bufSize,inn.invmass);
-    this.dataObjectStat = createAllocatedDataObject(this.bufSize,inn.stat);
-
-    this.dataObjectConn =    createAllocatedDataObject(this.bufSize*inn.maxconn,inn.conn);
-    this.dataObjectL =       createAllocatedDataObject(this.bufSize*inn.maxconn,inn.L);
   }
 
-  this.dataObjectX.set(inn.x);
-  this.dataObjectY.set(inn.y);
-  this.dataObjectVx.set(inn.vx);
-  this.dataObjectVy.set(inn.vy);
-  this.dataObjectInvMass.set(inn.invmass);
-  this.dataObjectStat.set(inn.stat);
-  this.dataObjectConn.set(inn.conn);
-  this.dataObjectL.set(inn.L);
+  this.dataObjectX = inn.x;
+  this.dataObjectY = inn.y;
+  this.dataObjectVx = inn.vx;
+  this.dataObjectVy = inn.vy;
+  this.dataObjectInvMass = inn.invmass;
+  this.dataObjectStat = inn.stat;
+  this.dataObjectConn = inn.conn;
+  this.dataObjectL = inn.L;
 
   // Enqueue input things
-  this.cmdQueue.enqueueWriteBuffer(this.bufInX,       false, 0, this.dataObjectX.length,       this.dataObjectX,       []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInY,       false, 0, this.dataObjectY.length,       this.dataObjectY,       []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInVx,      false, 0, this.dataObjectVx.length,      this.dataObjectVx,      []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInVy,      false, 0, this.dataObjectVy.length,      this.dataObjectVy,      []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInInvMass, false, 0, this.dataObjectInvMass.length, this.dataObjectInvMass, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInStat, false, 0, this.dataObjectStat.length, this.dataObjectStat, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInConn,    false, 0, this.dataObjectConn.length,    this.dataObjectConn,    []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInL,       false, 0, this.dataObjectL.length,       this.dataObjectL,    []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInX, false, 0, this.bufSize, this.dataObjectX, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInY, false, 0, this.bufSize, this.dataObjectY, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInVx, false, 0, this.bufSize, this.dataObjectVx,[]);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInVy, false, 0, this.bufSize, this.dataObjectVy,[]);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInInvMass, false, 0, this.bufSize, this.dataObjectInvMass, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInStat, false, 0, this.bufSize, this.dataObjectStat, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInConn, false, 0, this.dataObjectConn.buffer.byteLength, this.dataObjectConn, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInL, false, 0, this.dataObjectL.buffer.byteLength, this.dataObjectL,[]);
 
 
   // Execute (enqueue) kernel
@@ -744,11 +723,6 @@ WebCLStepper.prototype.step = function(inn,out){
 
   this.cmdQueue.finish();
   this.cmdQueue.flush();
-
-  this.utils.writeDataObjectToTypedArray(this.dataObjectX,  out.x);
-  this.utils.writeDataObjectToTypedArray(this.dataObjectY,  out.y);
-  this.utils.writeDataObjectToTypedArray(this.dataObjectVx, out.vx);
-  this.utils.writeDataObjectToTypedArray(this.dataObjectVy, out.vy);
 
   var t1 = new Date().getTime();
 

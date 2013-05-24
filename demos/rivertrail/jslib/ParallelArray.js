@@ -337,7 +337,7 @@ var ParallelArray = function () {
             if (localShape[level] != arr.length) {
                 // We do not have a regular array.
                 console.log("createFlatArray: array is not regular - shape[level] != arr.length");
-                console.log(" shape: ", localShape, " level: ", level, " arr.length: ". arr.length);
+                console.log(" shape: ", localShape, " level: ", level, " arr.length: ", arr.length);
                 throw ("Array is not regular.");
             }
             for (thisLevelIndex=0;thisLevelIndex<arr.length;thisLevelIndex++) {

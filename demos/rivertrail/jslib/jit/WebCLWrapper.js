@@ -118,10 +118,12 @@ WebCLKernel.prototype.run = function(rank, shape, tile) {
     try {
         var fname = this.kernel.getKernelInfo(WebCL.CL_KERNEL_FUNCTION_NAME);
         DEBUG("kernel.run: " + fname + "()");
+        /*
         var prog = this.kernel.getKernelInfo(WebCL.CL_KERNEL_PROGRAM);
         var src = prog.getProgramInfo(WebCL.CL_PROGRAM_SOURCE);
         DEBUG("kernel source: ");
         DEBUG(src);
+        */
 
         this.kernel.setKernelArg(0, this.FAILRET.memobj);
 

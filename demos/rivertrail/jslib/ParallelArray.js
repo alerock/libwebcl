@@ -1897,7 +1897,7 @@ var ParallelArray = function () {
             result = createEmptyParallelArray.call(this);
         } else if (arguments.length == 1) {     
             result = createSimpleParallelArray.call(this, arguments[0]);
-        } else if ((arguments.length == 2) && (typeof(arguments[0]) == 'function')) {
+        } else if ((arguments.length == 2) && (arguments[0] == Float32Array)) {
             // Special case where we force the type of the result. Should only be used internally
             result = createSimpleParallelArray.call(this, arguments[1], arguments[0]);
         } else if (useWebCL && (arguments[0] instanceof WebCLMemoryObject)) {

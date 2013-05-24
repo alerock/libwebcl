@@ -49,7 +49,7 @@ RiverTrail.compiler = (function () {
     // whether to cache OpenCL buffers
     var useBufferCaching = true;
 
-    const suppressOpenCL = false;
+    var suppressOpenCL = false;
 
     var openCLContext; 
     try {
@@ -81,7 +81,7 @@ RiverTrail.compiler = (function () {
         } else {
             lowPrecision = !enable64BitFloatingPoint;
         }
-        const defaultNumberType = lowPrecision ? "float": "double";
+        var defaultNumberType = lowPrecision ? "float": "double";
 
         // First convert all arguments to ParallelArray representation. As we need to have shape and type
         // information anyhow, this has little overhead to only converting the data to a typed array.

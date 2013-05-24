@@ -131,7 +131,7 @@ RiverTrail.Helper = function () {
     }; 
 
     function stripToBaseType(s) {
-        const regExp = /([a-zA-Z ]|\/\*|\*\/)*/;
+        var regExp = /([a-zA-Z ]|\/\*|\*\/)*/;
         var match = s.match(regExp);
         return match[0];
     }

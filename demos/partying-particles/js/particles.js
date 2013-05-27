@@ -105,17 +105,18 @@ var ParticlesSystem = function(canvas_id, config){
  * @brief Init the CL part of the demo, by getting context, compiling the program and creating buffers
  */
 ParticlesSystem.prototype._initCL = function() {
-    this.cl = window.webCL;
+    this.cl = window.WebCL;
     if (this.cl === undefined){
         alert("You need WebCL to run this demo. Please download the corresponding Firefox binaries at gfx.parapluie.org");
     }
     var platforms = this.cl.getPlatforms();
     var devices = platforms[0].getDevices(this.cl.CL_DEVICE_TYPE_ALL);
-    var context = this.cl.createContext(devices, platforms[0], this.egl.gl);
+    var context = this.cl.createContext([this.cl.CONTEXT_PLATFORM, platforms[0]],
+            devices, this.egl.gl);
     var prog_src = Dom.ajax("programs/particles.cl");
     var program = context.createProgramWithSource(prog_src);
     try{
-        program.buildProgram(devices[0], "");
+        program.buildProgram([devices[0]], "");
     }
     catch(buildError){
         alert(program.getProgramBuildInfo(devices[0], this.cl.CL_PROGRAM_BUILD_LOG));

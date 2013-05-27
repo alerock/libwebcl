@@ -1,6 +1,7 @@
 <html><head>
 <TITLE>XY model. TEA RNG</TITLE>
 
+<script src="../../libwebcl.js" type="text/javascript"></script>
 <script src="cl_gl.js" type="text/javascript"></script>
 
 <script id="clXY" type="text/x-opencl">
@@ -111,7 +112,7 @@ function CL_rand () {
     for ( var i = 0; i < n*n;  i++ )
       spin[i] = Math.random();
     var format = {channelOrder:WebCL.CL_R, channelDataType:WebCL.CL_FLOAT};
-    iSpin  = ctx.createImage2D(WebCL.CL_MEM_READ_WRIRE, format, n, n, 0);
+    iSpin  = ctx.createImage2D(WebCL.CL_MEM_READ_WRITE, format, n, n, 0);
     iSpin1 = ctx.createImage2D(WebCL.CL_MEM_READ_WRITE, format, n, n, 0);
     bufPix  = ctx.createBuffer (WebCL.CL_MEM_WRITE_ONLY, 4*n*n);
 

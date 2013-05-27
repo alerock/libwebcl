@@ -48,7 +48,7 @@ function xhrLoad(uri) {
   var xhr = new XMLHttpRequest();
   xhr.open("GET", uri, false);
   xhr.send(null);
-  if (xhr.status == 200) {
+  if (xhr.status == 200 || xhr.status == 0) {
     //console.log(xhr.responseText);
     return xhr.responseText;
   } else {

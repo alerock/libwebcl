@@ -687,24 +687,17 @@ WebCLStepper.prototype.step = function(inn,out){
     this.kernel.setKernelArg(i++, inn.G, WebCL.types.FLOAT);
   }
 
-  this.dataObjectX = inn.x;
-  this.dataObjectY = inn.y;
-  this.dataObjectVx = inn.vx;
-  this.dataObjectVy = inn.vy;
-  this.dataObjectInvMass = inn.invmass;
-  this.dataObjectStat = inn.stat;
-  this.dataObjectConn = inn.conn;
-  this.dataObjectL = inn.L;
-
   // Enqueue input things
-  this.cmdQueue.enqueueWriteBuffer(this.bufInX, false, 0, this.bufSize, this.dataObjectX, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInY, false, 0, this.bufSize, this.dataObjectY, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInVx, false, 0, this.bufSize, this.dataObjectVx,[]);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInVy, false, 0, this.bufSize, this.dataObjectVy,[]);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInInvMass, false, 0, this.bufSize, this.dataObjectInvMass, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInStat, false, 0, this.bufSize, this.dataObjectStat, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInConn, false, 0, this.dataObjectConn.buffer.byteLength, this.dataObjectConn, []);
-  this.cmdQueue.enqueueWriteBuffer(this.bufInL, false, 0, this.dataObjectL.buffer.byteLength, this.dataObjectL,[]);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInX, false, 0, this.bufSize, inn.x, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInY, false, 0, this.bufSize, inn.y, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInVx, false, 0, this.bufSize, inn.vx,[]);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInVy, false, 0, this.bufSize, inn.vy,[]);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInInvMass, false, 0, this.bufSize, inn.invmass, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInStat, false, 0, this.bufSize, inn.stat, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInConn, false, 0, inn.conn.buffer.byteLength,
+          inn.conn, []);
+  this.cmdQueue.enqueueWriteBuffer(this.bufInL, false, 0, inn.L.buffer.byteLength,
+          inn.L,[]);
 
 
   // Execute (enqueue) kernel
@@ -716,10 +709,10 @@ WebCLStepper.prototype.step = function(inn,out){
 				     []);
 
   // Read the result buffer from OpenCL device
-  this.cmdQueue.enqueueReadBuffer(this.bufOutX, false, 0, this.bufSize, this.dataObjectX, []);
-  this.cmdQueue.enqueueReadBuffer(this.bufOutY, false, 0, this.bufSize, this.dataObjectY, []);
-  this.cmdQueue.enqueueReadBuffer(this.bufOutVx,false, 0, this.bufSize, this.dataObjectVx, []);
-  this.cmdQueue.enqueueReadBuffer(this.bufOutVy,false, 0, this.bufSize, this.dataObjectVy, []);
+  this.cmdQueue.enqueueReadBuffer(this.bufOutX, false, 0, this.bufSize, out.x, []);
+  this.cmdQueue.enqueueReadBuffer(this.bufOutY, false, 0, this.bufSize, out.y, []);
+  this.cmdQueue.enqueueReadBuffer(this.bufOutVx,false, 0, this.bufSize, out.vx, []);
+  this.cmdQueue.enqueueReadBuffer(this.bufOutVy,false, 0, this.bufSize, out.vy, []);
 
   this.cmdQueue.finish();
   this.cmdQueue.flush();

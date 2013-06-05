@@ -1,0 +1,9 @@
+webcl_test.html
+* Line 9 - Include libwebcl, a wrapper to make code compatible with WebKit implementation
+* line 126 - Check HTTP status code "0" (local files)
+
+webcl.js
+* Line 107 - There is a bug with build log in WebKit implementation  It throws an 
+  exception when log exceeds max size
+* Line 202 - julia is defined as boolean in javascript. In OpenCL code it's defined
+  as int in sample kernel. Working after change to int in setKernelArgs.

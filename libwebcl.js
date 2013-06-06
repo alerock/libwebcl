@@ -27,6 +27,16 @@
 
     window.WebCL = (function () {
 
+        function getSupportedExtensions() {
+            var extensions = [];
+
+            try {
+                return nativeWebCL.getSupportedExtensions();
+            } catch (e) {
+                WEBCL_EXCEPTION(e);
+            }
+        }
+
         function getPlatforms() {
             try {
                 var platforms = [];
@@ -79,6 +89,9 @@
         }
 
         var API = {
+
+            getSupportedExtensions : getSupportedExtensions,
+
             getPlatforms : getPlatforms,
 
             getPlatformIDs : getPlatforms,
@@ -104,6 +117,8 @@
         // Mozilla WebCL API
         API['CL_PLATFORM_NAME'] = nativeWebCL.PLATFORM_VERSION;
         API['CL_PLATFORM_VENDOR'] = nativeWebCL.PLATFORM_VERSION;
+        API['CL_PLATFORM_EXTENSIONS'] = 0x904;
+        API['CL_DEVICE_EXTENSIONS'] = 0x1030;
 
         console.log("WebCL :", nativeWebCL);
 
@@ -114,7 +129,16 @@
 
         function getInfo(name) {
             try {
-                return nativePlatform.getInfo(name);
+
+                switch (name) {
+                case WebCL.CL_PLATFORM_EXTENSIONS :
+                    return WebCL.getSupportedExtensions();
+                    break;
+
+                default:
+                    return nativePlatform.getInfo(name);
+                }
+
             } catch (e) {
                 console.log("PARAM: name = ", name);
                 WEBCL_EXCEPTION(e);
@@ -157,7 +181,7 @@
 
         function getDevices(deviceType) {
             try {
-                // BUG Error: INVALID_VALUE: DOM WebCL Exception -30 
+                // BUG Error: INVALID_VALUE: DOM WebCL Exception -30
                 // for DEVICE_TYPE_ALL
                 var deviceTypes = [];
                 var devices = [];
@@ -392,7 +416,7 @@
             try {
                 return nativeProgram.getBuildInfo(hostDevice.getNative(), name);
             } catch (e) {
-                console.log("PARAMS: hostDevice = ", hostDevice, ", name = ", name);
+                console.log("PARAMS: hostDevice = ", hostDevice.getNative(), ", name = ", name);
                 WEBCL_EXCEPTION(e);
             }
         }
@@ -408,7 +432,7 @@
             } catch (e) {
                 var log = "";
                 // BUG : get PROGRAM_BUILD_LOG
-                // INVALID_VALUE: DOM WebCL Exception -30 
+                // INVALID_VALUE: DOM WebCL Exception -30
                 if (nativeDevices.length > 0) {
                     console.log(nativeDevices, nativeWebCL.PROGRAM_BUILD_LOG);
                     log = nativeProgram.getBuildInfo(nativeDevices,
@@ -533,6 +557,7 @@
         function enqueueNDRangeKernel(hostKernel, workDim, globalWorkOffset,
                 globalWorkSize, localWorkSize) {
             try {
+
                 if (typeof(globalWorkSize) == 'number') {
                     globalWorkSize = [globalWorkSize];
                 }
@@ -545,6 +570,8 @@
 
                 var gws = new Int32Array(globalWorkSize);
                 var lws = new Int32Array(localWorkSize);
+
+                console.log("gws", [gws], "lws", [lws]);
 
                 nativeCmdQueue.enqueueNDRangeKernel(hostKernel.getNative(),
                         null, gws, lws);
@@ -572,6 +599,22 @@
             } catch (e) {
                 WEBCL_EXCEPTION(e);
             }
+        }
+
+        function enqueueReadImage(srcImage, blockingRead, origin, region, rowPitch, slicePitch,
+                hostPtr) {
+
+            var origin = (origin instanceof Int32Array) ? origin : new Int32Array(origin);
+            var region = (region instanceof Int32Array) ? region : new Int32Array(region);
+            var rowPitch = (rowPitch instanceof Uint32Array) ? rowPitch : new Uint32Array([rowPitch]);
+
+            try {
+                return nativeCmdQueue.enqueueReadImage(srcImage.getNative(), blockingRead,
+                        origin, region, rowPitch, hostPtr);
+            } catch (e) {
+                WEBCL_EXCEPTION(e);
+            }
+
         }
 
         function enqueueReadBuffer(srcBufferObject, blockingRead, srcOffset,
@@ -636,6 +679,8 @@
             enqueueAcquireGLObjects :enqueueAcquireGLObjects,
 
             enqueueReleaseGLObjects :enqueueReleaseGLObjects,
+
+            enqueueReadImage : enqueueReadImage,
 
             finish : function () {
                 nativeCmdQueue.finish();

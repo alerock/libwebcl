@@ -322,7 +322,6 @@
             try {
                 var nativeQueue = nativeContext.createCommandQueue(hostDevice.getNative(),
                         properties);
-                console.log("New CommandQueue for", hostDevice.name);
                 return new WebCLCommandQueue(nativeQueue);
             } catch (e) {
                 console.log("PARAMS: hostDevice = ", hostDevice,

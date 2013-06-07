@@ -120,8 +120,6 @@
         API['CL_PLATFORM_EXTENSIONS'] = 0x904;
         API['CL_DEVICE_EXTENSIONS'] = 0x1030;
 
-        console.log("WebCL :", nativeWebCL);
-
         return API;
     })();
 
@@ -322,7 +320,6 @@
             try {
                 var nativeQueue = nativeContext.createCommandQueue(hostDevice.getNative(),
                         properties);
-                console.log("New CommandQueue for", hostDevice.name);
                 return new WebCLCommandQueue(nativeQueue);
             } catch (e) {
                 console.log("PARAMS: hostDevice = ", hostDevice,
@@ -570,8 +567,6 @@
 
                 var gws = new Int32Array(globalWorkSize);
                 var lws = new Int32Array(localWorkSize);
-
-                console.log("gws", [gws], "lws", [lws]);
 
                 nativeCmdQueue.enqueueNDRangeKernel(hostKernel.getNative(),
                         null, gws, lws);

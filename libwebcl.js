@@ -204,7 +204,15 @@
                 }
 
                 for (var j in deviceTypes) {
-                    nativeDevices = nativePlatform.getDevices(deviceTypes[j]);
+
+                    try {
+                        nativeDevices = nativePlatform.getDevices(deviceTypes[j]);
+                    } catch (e) {
+                        if (e !== nativeWeCL.DEVICE_NOT_FOUND) {
+                            throw e;
+                        }
+                    }
+
                     for (var i in nativeDevices) {
                         var isAvailable = nativeDevices[i].getInfo(nativeWebCL.DEVICE_AVAILABLE);
                         if (isAvailable === true) {
@@ -212,6 +220,10 @@
                             devices.push(availableDevice);
                         }
                     }
+                }
+
+                if (!devices.length) {
+                    throw nativeWebCL.DEVICE_NOT_FOUND;
                 }
 
                 return devices;
